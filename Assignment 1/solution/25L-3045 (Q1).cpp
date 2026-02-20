@@ -84,14 +84,12 @@ bool compareLess(string **arr, int a, int b)
 
 void sortMenu(string **dynArr, int rows)
 {
-    // Bubble sort
     for (int i = 0; i < rows - 1; i++)
     {
         for (int j = 0; j < rows - i - 1; j++)
         {
             if (!compareLess(dynArr, j, j + 1))
             {
-                // Swap pointers
                 string *temp = dynArr[j];
                 dynArr[j] = dynArr[j + 1];
                 dynArr[j + 1] = temp;
@@ -114,7 +112,6 @@ void displayItem(string **dynArr, int idx)
 
 int main()
 {
-    // ---- Step 1: Read file into static 2D char array ----
     string staticArr[MAX_ROWS][MAX_COLS];
     int rowCount = 0;
 

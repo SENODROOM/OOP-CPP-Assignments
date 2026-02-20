@@ -1,94 +1,137 @@
 #include <iostream>
+#include <string>
 using namespace std;
 
-// Count non-zero elements in a row
-int countNonZero(int* row, int cols) {
-    int count = 0;
-    for (int j = 0; j < cols; j++)
-        if (row[j] != 0) count++;
+int countGroups(char *ws)
+{
+    int count = 1;
+    for (int i = 0; ws[i] != '\0'; i++)
+    {
+        if (ws[i] == '#')
+        {
+            count++;
+        }
+    }
     return count;
 }
 
-// Create compact jagged array from 2D grid
-int** createCompactList(int** grid, int rows, int cols, int*& rowSizes) {
-    rowSizes = new int[rows];
-    for (int i = 0; i < rows; i++)
-        rowSizes[i] = countNonZero(grid[i], cols);
-
-    int** compact = new int*[rows];
-    for (int i = 0; i < rows; i++) {
-        compact[i] = new int[rowSizes[i]];
-        int idx = 0;
-        for (int j = 0; j < cols; j++) {
-            if (grid[i][j] != 0)
-                compact[i][idx++] = grid[i][j];
+int countWords(const string &group)
+{
+    int count = 0;
+    bool inWord = false;
+    for (int i = 0; i < (int)group.size(); i++)
+    {
+        if (group[i] != ' ' && !inWord)
+        {
+            inWord = true;
+            count++;
+        }
+        else if (group[i] == ' ')
+        {
+            inWord = false;
         }
     }
-    return compact;
+    return count;
 }
 
-void printGrid(int** grid, int rows, int cols) {
-    cout << "Input Matrix:" << endl;
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            cout << grid[i][j];
-            if (j < cols - 1) cout << " ";
+string **CreateDynamicArray(char *ws, int &numGroups, int *&rowSizes)
+{
+    numGroups = countGroups(ws);
+    rowSizes = new int[numGroups];
+
+    string *groups = new string[numGroups];
+    int gi = 0;
+    string current = "";
+    for (int i = 0; ws[i] != '\0'; i++)
+    {
+        if (ws[i] == '#')
+        {
+            groups[gi++] = current;
+            current = "";
+        }
+        else
+        {
+            current += ws[i];
+        }
+    }
+    groups[gi] = current;
+
+    string **arr = new string *[numGroups];
+    for (int i = 0; i < numGroups; i++)
+    {
+        rowSizes[i] = countWords(groups[i]);
+        arr[i] = new string[rowSizes[i]];
+
+        int wi = 0;
+        string word = "";
+        for (int j = 0; j < (int)groups[i].size(); j++)
+        {
+            if (groups[i][j] == ' ')
+            {
+                if (!word.empty())
+                {
+                    arr[i][wi++] = word;
+                    word = "";
+                }
+            }
+            else
+            {
+                word += groups[i][j];
+            }
+        }
+        if (!word.empty())
+        {
+            arr[i][wi] = word;
+        }
+    }
+
+    delete[] groups;
+    return arr;
+}
+
+int main()
+{
+    char ws[] = "abandon discontinue vacate#absent missing unavailable#cable wire#calculate compute determine measure#safety security refuge";
+
+    int numGroups = 0;
+    int *rowSizes = nullptr;
+    string **thesaurus = CreateDynamicArray(ws, numGroups, rowSizes);
+
+    cout << "===== Thesaurus Array =====" << endl;
+    for (int i = 0; i < numGroups; i++)
+    {
+        cout << "Group " << i << ": ";
+        for (int j = 0; j < rowSizes[i]; j++)
+        {
+            cout << "[" << thesaurus[i][j] << "] ";
         }
         cout << endl;
     }
-}
 
-void printCompact(int** compact, int rows, int* rowSizes) {
-    cout << "\nOutput Array (Compact List):" << endl;
-    for (int i = 0; i < rows; i++) {
-        cout << "Shelf " << (i + 1) << ": ";
-        if (rowSizes[i] == 0) {
-            cout << "(empty)";
+    cout << "\nEnter word to paraphrase: ";
+    string userWord;
+    cin >> userWord;
+
+    bool found = false;
+    for (int i = 0; i < numGroups; i++)
+    {
+        if (rowSizes[i] > 0 && thesaurus[i][0] == userWord)
+        {
+            cout << "Replaced word: " << thesaurus[i][rowSizes[i] - 1] << endl;
+            found = true;
+            break;
         }
-        for (int j = 0; j < rowSizes[i]; j++) {
-            cout << compact[i][j];
-            if (j < rowSizes[i] - 1) cout << " ";
-        }
-        cout << endl;
     }
-}
-
-int main() {
-    const int ROWS = 5;
-    const int COLS = 6;
-
-    // Static input grid (as given in assignment)
-    int data[ROWS][COLS] = {
-        {2, 3, 1, 0, 0, 0},
-        {0, 0, 0, 1, 1, 0},
-        {1, 0, 0, 0, 0, 0},
-        {1, 1, 1, 2, 0, 2},
-        {5, 0, 0, 0, 10, 0}
-    };
-
-    // Allocate dynamic 2D grid
-    int** grid = new int*[ROWS];
-    for (int i = 0; i < ROWS; i++) {
-        grid[i] = new int[COLS];
-        for (int j = 0; j < COLS; j++)
-            grid[i][j] = data[i][j];
+    if (!found)
+    {
+        cout << "Word not found in thesaurus." << endl;
     }
 
-    printGrid(grid, ROWS, COLS);
-
-    // Create compact list
-    int* rowSizes = nullptr;
-    int** compact = createCompactList(grid, ROWS, COLS, rowSizes);
-
-    printCompact(compact, ROWS, rowSizes);
-
-    // ---- Cleanup ----
-    for (int i = 0; i < ROWS; i++) {
-        delete[] grid[i];
-        delete[] compact[i];
+    for (int i = 0; i < numGroups; i++)
+    {
+        delete[] thesaurus[i];
     }
-    delete[] grid;
-    delete[] compact;
+    delete[] thesaurus;
     delete[] rowSizes;
 
     return 0;

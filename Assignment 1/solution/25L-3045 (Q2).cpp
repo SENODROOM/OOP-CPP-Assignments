@@ -1,217 +1,549 @@
 #include <iostream>
-#include <fstream>
 #include <string>
-#include <cstring>
+#include <cmath>
 using namespace std;
 
-const int MAX_ROWS = 100;
-const int MAX_COLS = 7; // Category, CuisineType, ItemName, Price, RestaurantName, CookName, Calories
-const int MAX_LEN = 200;
+struct Attribute
+{
+    string name;
+    string value;
+    Attribute *next;
 
-// Trim whitespace from a string
-string trim(const string& s) {
-    int start = 0, end = (int)s.size() - 1;
-    while (start <= end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\r' || s[start] == '\n'))
-        start++;
-    while (end >= start && (s[end] == ' ' || s[end] == '\t' || s[end] == '\r' || s[end] == '\n'))
-        end--;
-    if (start > end) return "";
-    return s.substr(start, end - start + 1);
-}
+    Attribute(const string &n, const string &v) : name(n), value(v), next(nullptr) {}
+};
 
-// Split a line by comma into tokens
-int splitLine(const string& line, string tokens[], int maxTokens) {
-    int count = 0;
-    string current = "";
-    for (int i = 0; i < (int)line.size(); i++) {
-        if (line[i] == ',' && count < maxTokens - 1) {
-            tokens[count++] = trim(current);
-            current = "";
-        } else {
-            current += line[i];
+struct CartItem
+{
+    int id;
+    string name;
+    Attribute *attrs;
+    CartItem *next;
+
+    CartItem(int i, const string &n) : id(i), name(n), attrs(nullptr), next(nullptr) {}
+
+    ~CartItem()
+    {
+        Attribute *cur = attrs;
+        while (cur)
+        {
+            Attribute *tmp = cur->next;
+            delete cur;
+            cur = tmp;
         }
     }
-    tokens[count++] = trim(current);
-    return count;
-}
+};
 
-// Category order for sorting
-int categoryOrder(const string& cat) {
-    if (cat == "Appetizer") return 0;
-    if (cat == "Main Course") return 1;
-    if (cat == "Dessert") return 2;
-    return 3;
-}
+class ShoppingCart
+{
+    CartItem *head;
+    int size;
 
-// Get base cuisine type (before '-')
-string baseCuisine(const string& cuisine) {
-    int pos = cuisine.find('-');
-    if (pos != (int)string::npos)
-        return cuisine.substr(0, pos);
-    return cuisine;
-}
+public:
+    ShoppingCart() : head(nullptr), size(0) {}
 
-// Compare two rows for sorting:
-// Priority: Cuisine base (A-Z) -> Restaurant (A-Z) -> Category order -> Price (low-high)
-bool compareLess(string** arr, int a, int b) {
-    // Cuisine type base
-    string ca = baseCuisine(arr[a][1]);
-    string cb = baseCuisine(arr[b][1]);
-    if (ca != cb) return ca < cb;
+    ~ShoppingCart()
+    {
+        clearCart();
+    }
 
-    // Restaurant Name
-    if (arr[a][4] != arr[b][4]) return arr[a][4] < arr[b][4];
+    void addItem(int id, const string &name)
+    {
+        CartItem *cur = head;
+        while (cur)
+        {
+            if (cur->id == id)
+            {
+                cout << "Item with ID " << id << " already exists!" << endl;
+                return;
+            }
+            cur = cur->next;
+        }
+        CartItem *newItem = new CartItem(id, name);
+        if (!head)
+        {
+            head = newItem;
+        }
+        else
+        {
+            CartItem *tmp = head;
+            while (tmp->next)
+            {
+                tmp = tmp->next;
+            }
+            tmp->next = newItem;
+        }
+        size++;
+        cout << "Item added successfully!" << endl;
+    }
 
-    // Category order
-    int oa = categoryOrder(arr[a][0]);
-    int ob = categoryOrder(arr[b][0]);
-    if (oa != ob) return oa < ob;
+    void removeItem(int id)
+    {
+        if (!head)
+        {
+            cout << "Cart is empty!" << endl;
+            return;
+        }
+        if (head->id == id)
+        {
+            CartItem *tmp = head;
+            head = head->next;
+            delete tmp;
+            size--;
+            cout << "Item removed successfully!" << endl;
+            return;
+        }
+        CartItem *cur = head;
+        while (cur->next && cur->next->id != id)
+        {
+            cur = cur->next;
+        }
+        if (!cur->next)
+        {
+            cout << "Item not found!" << endl;
+            return;
+        }
+        CartItem *tmp = cur->next;
+        cur->next = tmp->next;
+        delete tmp;
+        size--;
+        cout << "Item removed successfully!" << endl;
+    }
 
-    // Price
-    int pa = arr[a][3].empty() ? 0 : stoi(arr[a][3]);
-    int pb = arr[b][3].empty() ? 0 : stoi(arr[b][3]);
-    return pa < pb;
-}
+    void addAttribute(int id, const string &attrName, const string &attrValue)
+    {
+        CartItem *item = findItem(id);
+        if (!item)
+        {
+            cout << "Item not found!" << endl;
+            return;
+        }
+        Attribute *cur = item->attrs;
+        while (cur)
+        {
+            if (cur->name == attrName)
+            {
+                cur->value = attrValue;
+                cout << "Attribute added successfully!" << endl;
+                return;
+            }
+            cur = cur->next;
+        }
+        Attribute *newAttr = new Attribute(attrName, attrValue);
+        if (!item->attrs)
+        {
+            item->attrs = newAttr;
+        }
+        else
+        {
+            Attribute *tmp = item->attrs;
+            while (tmp->next)
+            {
+                tmp = tmp->next;
+            }
+            tmp->next = newAttr;
+        }
+        cout << "Attribute added successfully!" << endl;
+    }
 
-void sortMenu(string** dynArr, int rows) {
-    // Bubble sort
-    for (int i = 0; i < rows - 1; i++) {
-        for (int j = 0; j < rows - i - 1; j++) {
-            if (!compareLess(dynArr, j, j + 1)) {
-                // Swap pointers
-                string* temp = dynArr[j];
-                dynArr[j] = dynArr[j + 1];
-                dynArr[j + 1] = temp;
+    void removeAttribute(int id, const string &attrName)
+    {
+        CartItem *item = findItem(id);
+        if (!item)
+        {
+            cout << "Item not found!" << endl;
+            return;
+        }
+        if (!item->attrs)
+        {
+            cout << "No attributes found for item!" << endl;
+            return;
+        }
+        if (item->attrs->name == attrName)
+        {
+            Attribute *tmp = item->attrs;
+            item->attrs = item->attrs->next;
+            delete tmp;
+            cout << "Attribute removed successfully!" << endl;
+            return;
+        }
+        Attribute *cur = item->attrs;
+        while (cur->next && cur->next->name != attrName)
+        {
+            cur = cur->next;
+        }
+        if (!cur->next)
+        {
+            cout << "Attribute not found!" << endl;
+            return;
+        }
+        Attribute *tmp = cur->next;
+        cur->next = tmp->next;
+        delete tmp;
+        cout << "Attribute removed successfully!" << endl;
+    }
+
+    void getItemInfo(int id)
+    {
+        CartItem *item = findItem(id);
+        if (!item)
+        {
+            cout << "Item not found!" << endl;
+            return;
+        }
+        cout << "Item ID: " << item->id << endl;
+        cout << "Name: " << item->name << endl;
+        Attribute *cur = item->attrs;
+        while (cur)
+        {
+            cout << cur->name << ": " << cur->value << endl;
+            cur = cur->next;
+        }
+    }
+
+    void clearCart()
+    {
+        CartItem *cur = head;
+        while (cur)
+        {
+            CartItem *tmp = cur->next;
+            delete cur;
+            cur = tmp;
+        }
+        head = nullptr;
+        size = 0;
+        cout << "Cart cleared successfully!" << endl;
+    }
+
+    void sortCartByAttr(const string &attrName)
+    {
+        if (!head || !head->next)
+        {
+            cout << "Cart sorted successfully!" << endl;
+            printCart(attrName);
+            return;
+        }
+        CartItem **arr = new CartItem *[size];
+        CartItem *cur = head;
+        for (int i = 0; i < size; i++)
+        {
+            arr[i] = cur;
+            cur = cur->next;
+        }
+        for (int i = 0; i < size - 1; i++)
+        {
+            for (int j = 0; j < size - i - 1; j++)
+            {
+                string va = getAttrValue(arr[j], attrName);
+                string vb = getAttrValue(arr[j + 1], attrName);
+                bool shouldSwap = false;
+                bool aIsNum = isNumeric(va);
+                bool bIsNum = isNumeric(vb);
+                if (aIsNum && bIsNum)
+                {
+                    shouldSwap = stod(va) > stod(vb);
+                }
+                else
+                {
+                    shouldSwap = va > vb;
+                }
+                if (shouldSwap)
+                {
+                    CartItem *tmp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = tmp;
+                }
             }
         }
+        head = arr[0];
+        for (int i = 0; i < size - 1; i++)
+        {
+            arr[i]->next = arr[i + 1];
+        }
+        arr[size - 1]->next = nullptr;
+        delete[] arr;
+        cout << "Cart sorted successfully!" << endl;
+        printCart(attrName);
     }
-}
 
-void displayItem(string** dynArr, int idx) {
-    cout << "  Category     : " << dynArr[idx][0] << endl;
-    cout << "  Cuisine      : " << dynArr[idx][1] << endl;
-    cout << "  Item Name    : " << dynArr[idx][2] << endl;
-    cout << "  Price        : " << dynArr[idx][3] << endl;
-    cout << "  Restaurant   : " << dynArr[idx][4] << endl;
-    cout << "  Cook Name    : " << (dynArr[idx][5].empty() ? "[missing]" : dynArr[idx][5]) << endl;
-    cout << "  Calories     : " << (dynArr[idx][6].empty() ? "[missing]" : dynArr[idx][6]) << endl;
-    cout << "  ----------------------------------------" << endl;
-}
-
-int main() {
-    // ---- Step 1: Read file into static 2D char array ----
-    string staticArr[MAX_ROWS][MAX_COLS];
-    int rowCount = 0;
-
-    // Write the input data to a file first
+    void totalCartValue(const string &priceAttr)
     {
-        ofstream fout("menu_data.txt");
-        fout << "Main Course,Experimental-Blue,Crystal Burger,1500,Heisenberg Kitchen,Walter White,1800\n";
-        fout << "Dessert,Experimental,Blue Ice Pops,350,Pinkman Treats,Jesse Pinkman,500\n";
-        fout << "Appetizer,Mexican-Street,Sloppy Nachos,400,Sauls Shady Snacks,,700\n";
-        fout << "Main Course,AmericanBBQ,Smoked Ribs,1200,Schrader Grill,Hank Schrader,1400\n";
-        fout << "Dessert,Mexican,Churros,250,Los Pollos Hermanos,,500\n";
-        fout << "Appetizer,Fusion,Blue Meth Fries,600,Vamonos Tacos,Todd Alquist,\n";
-        fout << "Main Course,American,Classic Cheeseburger,800,Albuquerque Diner,,950\n";
-        fout << "Dessert,ExperimentalFusion,Blue Velvet Cake,450,Heisenberg Kitchen,Walter White,700\n";
-        fout << "Appetizer,Mexican,Guacamole Supreme,300,Los Pollos Hermanos,Gustavo Fring,400\n";
-        fout << "Main Course,Fusion,Meth Glazed Chicken,1100,Pollos Fusion Lab,,1300\n";
-        fout << "Dessert,American,Apple Pie,280,Schrader Grill,Marie Schrader,\n";
-        fout << "Appetizer,Experimental-Blue,Blue Cheese Bombs,500,Pinkman Treats,Jesse Pinkman,650\n";
-        fout.close();
-    }
-
-    ifstream fin("menu_data.txt");
-    if (!fin) {
-        cout << "Error: Could not open menu_data.txt" << endl;
-        return 1;
-    }
-
-    string line;
-    while (getline(fin, line) && rowCount < MAX_ROWS) {
-        line = trim(line);
-        if (line.empty()) continue;
-        string tokens[MAX_COLS];
-        int count = splitLine(line, tokens, MAX_COLS);
-        for (int j = 0; j < MAX_COLS; j++) {
-            staticArr[rowCount][j] = (j < count) ? tokens[j] : "";
+        double total = 0;
+        CartItem *cur = head;
+        while (cur)
+        {
+            string val = getAttrValue(cur, priceAttr);
+            if (!val.empty() && isNumeric(val))
+            {
+                total += stod(val);
+            }
+            cur = cur->next;
         }
-        rowCount++;
+        cout << "Total Cart Value: " << total << endl;
     }
-    fin.close();
 
-    cout << "Read " << rowCount << " records from file." << endl;
-
-    // ---- Step 2: Create dynamic 2D string array ----
-    // Each row has MAX_COLS + 1 columns (last column = null marker via empty string sentinel)
-    int DCOLS = MAX_COLS + 1; // last col is null marker
-    string** dynArr = new string*[rowCount];
-    for (int i = 0; i < rowCount; i++) {
-        dynArr[i] = new string[DCOLS];
-        for (int j = 0; j < MAX_COLS; j++) {
-            dynArr[i][j] = staticArr[i][j];
+    void avgCartValue(const string &priceAttr)
+    {
+        if (size == 0)
+        {
+            cout << "Cart is empty!" << endl;
+            return;
         }
-        dynArr[i][MAX_COLS] = "\0"; // null marker as empty/null string
+        double total = 0;
+        int count = 0;
+        CartItem *cur = head;
+        while (cur)
+        {
+            string val = getAttrValue(cur, priceAttr);
+            if (!val.empty() && isNumeric(val))
+            {
+                total += stod(val);
+                count++;
+            }
+            cur = cur->next;
+        }
+        if (count == 0)
+        {
+            cout << "No numeric values found for attribute: " << priceAttr << endl;
+            return;
+        }
+        double avg = total / count;
+        cout << "Average Cart Value: ";
+        int intPart = (int)avg;
+        int decPart = (int)round((avg - intPart) * 100);
+        if (decPart == 100)
+        {
+            intPart++;
+            decPart = 0;
+        }
+        cout << intPart << ".";
+        if (decPart < 10)
+        {
+            cout << "0";
+        }
+        cout << decPart << endl;
     }
 
-    // ---- Step 3: Sort ----
-    sortMenu(dynArr, rowCount);
-
-    // ---- Step 4 & 5: Display sorted results ----
-    cout << "\n========== SORTED MENU ==========\n" << endl;
-    cout << "Sorted by: Cuisine Type -> Restaurant Name -> Category -> Price\n" << endl;
-    for (int i = 0; i < rowCount; i++) {
-        cout << "Item #" << (i + 1) << ":" << endl;
-        displayItem(dynArr, i);
-    }
-
-    // ---- Search Feature ----
-    cout << "\n========== SEARCH BY CUISINE TYPE ==========\n" << endl;
-    cout << "Enter cuisine type to search (e.g., Mexican, Experimental, Fusion): ";
-    string searchCuisine;
-    getline(cin, searchCuisine);
-    searchCuisine = trim(searchCuisine);
-
-    cout << "\nResults for cuisine containing \"" << searchCuisine << "\":\n" << endl;
-    bool found = false;
-    for (int i = 0; i < rowCount; i++) {
-        string cuisine = dynArr[i][1];
-        // Check if cuisine starts with or equals the search term
-        if (cuisine == searchCuisine ||
-            (cuisine.size() > searchCuisine.size() && cuisine.substr(0, searchCuisine.size()) == searchCuisine && cuisine[searchCuisine.size()] == '-') ||
-            (cuisine.size() > searchCuisine.size() && cuisine.find(searchCuisine) == 0)) {
-            displayItem(dynArr, i);
-            found = true;
+    void filterByAttribute(const string &attrName, const string &attrValue)
+    {
+        cout << "Filtered Items:" << endl;
+        bool found = false;
+        CartItem *cur = head;
+        while (cur)
+        {
+            string val = getAttrValue(cur, attrName);
+            if (attrValue.empty() || val == attrValue)
+            {
+                cout << cur->id << " - " << cur->name << endl;
+                found = true;
+            }
+            cur = cur->next;
+        }
+        if (!found)
+        {
+            cout << "No items match the filter." << endl;
         }
     }
-    if (!found) {
-        cout << "No items found for cuisine: " << searchCuisine << endl;
-    }
 
-    // ---- Bonus: Export to file ----
-    ofstream fout("sorted_menu.txt");
-    fout << "========== ORGANIZED MENU ==========\n\n";
-    string lastCategory = "";
-    for (int i = 0; i < rowCount; i++) {
-        if (dynArr[i][0] != lastCategory) {
-            lastCategory = dynArr[i][0];
-            fout << "\n*" << lastCategory << "*\n";
+    void printCart(const string &attrName = "")
+    {
+        cout << "Items in Cart:" << endl;
+        CartItem *cur = head;
+        while (cur)
+        {
+            cout << cur->id << " - " << cur->name;
+            if (!attrName.empty())
+            {
+                string val = getAttrValue(cur, attrName);
+                if (!val.empty())
+                {
+                    cout << " - " << val;
+                }
+            }
+            cout << endl;
+            cur = cur->next;
         }
-        fout << "  " << dynArr[i][2]
-             << "  |  Price: " << dynArr[i][3]
-             << "  |  Restaurant: " << dynArr[i][4]
-             << "  |  Cook: " << (dynArr[i][5].empty() ? "[missing]" : dynArr[i][5])
-             << "  |  Calories: " << (dynArr[i][6].empty() ? "[missing]" : dynArr[i][6])
-             << "\n";
     }
-    fout.close();
-    cout << "\nSorted menu exported to sorted_menu.txt" << endl;
 
-    // ---- Cleanup ----
-    for (int i = 0; i < rowCount; i++) {
-        delete[] dynArr[i];
+private:
+    CartItem *findItem(int id)
+    {
+        CartItem *cur = head;
+        while (cur)
+        {
+            if (cur->id == id)
+            {
+                return cur;
+            }
+            cur = cur->next;
+        }
+        return nullptr;
     }
-    delete[] dynArr;
+
+    string getAttrValue(CartItem *item, const string &attrName)
+    {
+        Attribute *cur = item->attrs;
+        while (cur)
+        {
+            if (cur->name == attrName)
+            {
+                return cur->value;
+            }
+            cur = cur->next;
+        }
+        return "";
+    }
+
+    bool isNumeric(const string &s)
+    {
+        if (s.empty())
+        {
+            return false;
+        }
+        int start = 0;
+        if (s[0] == '-')
+        {
+            start = 1;
+        }
+        bool hasDot = false;
+        for (int i = start; i < (int)s.size(); i++)
+        {
+            if (s[i] == '.' && !hasDot)
+            {
+                hasDot = true;
+                continue;
+            }
+            if (s[i] < '0' || s[i] > '9')
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+void printMenu()
+{
+    cout << "\n===== SHOPPING CART MENU =====" << endl;
+    cout << "1. Add Item" << endl;
+    cout << "2. Remove Item" << endl;
+    cout << "3. Add Attribute" << endl;
+    cout << "4. Remove Attribute" << endl;
+    cout << "5. Get Item Info" << endl;
+    cout << "6. Sort Cart By Attribute" << endl;
+    cout << "7. Total Cart Value" << endl;
+    cout << "8. Average Cart Value" << endl;
+    cout << "9. Filter By Attribute" << endl;
+    cout << "10. Clear Cart" << endl;
+    cout << "0. Exit" << endl;
+    cout << "Enter your choice: ";
+}
+
+int main()
+{
+    ShoppingCart cart;
+    int choice;
+
+    while (true)
+    {
+        printMenu();
+        cin >> choice;
+        cin.ignore();
+
+        if (choice == 0)
+        {
+            cout << "Thank you for using Shopping Cart System!" << endl;
+            break;
+        }
+        else if (choice == 1)
+        {
+            int id;
+            string name;
+            cout << "Enter Item ID: ";
+            cin >> id;
+            cin.ignore();
+            cout << "Enter Item Name: ";
+            getline(cin, name);
+            cart.addItem(id, name);
+        }
+        else if (choice == 2)
+        {
+            int id;
+            cout << "Enter Item ID to Remove: ";
+            cin >> id;
+            cin.ignore();
+            cart.removeItem(id);
+        }
+        else if (choice == 3)
+        {
+            int id;
+            string attrName, attrValue;
+            cout << "Enter Item ID: ";
+            cin >> id;
+            cin.ignore();
+            cout << "Enter Attribute Name: ";
+            getline(cin, attrName);
+            cout << "Enter Attribute Value: ";
+            getline(cin, attrValue);
+            cart.addAttribute(id, attrName, attrValue);
+        }
+        else if (choice == 4)
+        {
+            int id;
+            string attrName;
+            cout << "Enter Item ID: ";
+            cin >> id;
+            cin.ignore();
+            cout << "Enter Attribute Name to Remove: ";
+            getline(cin, attrName);
+            cart.removeAttribute(id, attrName);
+        }
+        else if (choice == 5)
+        {
+            int id;
+            cout << "Enter Item ID: ";
+            cin >> id;
+            cin.ignore();
+            cart.getItemInfo(id);
+        }
+        else if (choice == 6)
+        {
+            string attr;
+            cout << "Enter Attribute to Sort By: ";
+            getline(cin, attr);
+            cart.sortCartByAttr(attr);
+        }
+        else if (choice == 7)
+        {
+            string attr;
+            cout << "Enter Price Attribute Name: ";
+            getline(cin, attr);
+            cart.totalCartValue(attr);
+        }
+        else if (choice == 8)
+        {
+            string attr;
+            cout << "Enter Price Attribute Name: ";
+            getline(cin, attr);
+            cart.avgCartValue(attr);
+        }
+        else if (choice == 9)
+        {
+            string attrName, attrValue;
+            cout << "Enter Attribute Name: ";
+            getline(cin, attrName);
+            cout << "Enter Attribute Value (leave blank for all): ";
+            getline(cin, attrValue);
+            cart.filterByAttribute(attrName, attrValue);
+        }
+        else if (choice == 10)
+        {
+            cart.clearCart();
+        }
+        else
+        {
+            cout << "Invalid choice. Please try again." << endl;
+        }
+    }
 
     return 0;
 }
