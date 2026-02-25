@@ -1,0 +1,34 @@
+========== ORGANIZED MENU ==========
+
+
+*Main Course*
+  Classic Cheeseburger  |  Price: 800  |  Restaurant: Albuquerque Diner  |  Cook: [missing]  |  Calories: 950
+  Smoked Ribs  |  Price: 1200  |  Restaurant: Schrader Grill  |  Cook: Hank Schrader  |  Calories: 1400
+
+*Dessert*
+  Apple Pie  |  Price: 280  |  Restaurant: Schrader Grill  |  Cook: Marie Schrader  |  Calories: [missing]
+
+*Main Course*
+  Crystal Burger  |  Price: 1500  |  Restaurant: Heisenberg Kitchen  |  Cook: Walter White  |  Calories: 1800
+
+*Dessert*
+  Blue Velvet Cake  |  Price: 450  |  Restaurant: Heisenberg Kitchen  |  Cook: Walter White  |  Calories: 700
+
+*Appetizer*
+  Blue Cheese Bombs  |  Price: 500  |  Restaurant: Pinkman Treats  |  Cook: Jesse Pinkman  |  Calories: 650
+
+*Dessert*
+  Blue Ice Pops  |  Price: 350  |  Restaurant: Pinkman Treats  |  Cook: Jesse Pinkman  |  Calories: 500
+
+*Main Course*
+  Meth Glazed Chicken  |  Price: 1100  |  Restaurant: Pollos Fusion Lab  |  Cook: [missing]  |  Calories: 1300
+
+*Appetizer*
+  Blue Meth Fries  |  Price: 600  |  Restaurant: Vamonos Tacos  |  Cook: Todd Alquist  |  Calories: [missing]
+  Guacamole Supreme  |  Price: 300  |  Restaurant: Los Pollos Hermanos  |  Cook: Gustavo Fring  |  Calories: 400
+
+*Dessert*
+  Churros  |  Price: 250  |  Restaurant: Los Pollos Hermanos  |  Cook: [missing]  |  Calories: 500
+
+*Appetizer*
+  Sloppy Nachos  |  Price: 400  |  Restaurant: Sauls Shady Snacks  |  Cook: [missing]  |  Calories: 700
