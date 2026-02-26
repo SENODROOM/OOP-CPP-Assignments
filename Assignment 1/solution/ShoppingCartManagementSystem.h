@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include <cmath>
 using namespace std;
 
 struct Attribute
@@ -51,6 +50,7 @@ private:
     CartItem *findItem(int id);
     string getAttrValue(CartItem *item, const string &attrName);
     bool isNumeric(const string &s);
+    int customRound(double value);
 };
 
 void printMenu();

@@ -1,6 +1,4 @@
-#include <iostream>
-#include <string>
-using namespace std;
+#include "ThesaurusBasedWritingAssistant.h"
 
 int countGroups(char *ws)
 {

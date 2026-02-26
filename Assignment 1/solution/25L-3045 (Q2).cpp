@@ -291,7 +291,7 @@ void ShoppingCart::avgCartValue(const string &priceAttr)
     double avg = total / count;
     cout << "Average Cart Value: ";
     int intPart = (int)avg;
-    int decPart = (int)round((avg - intPart) * 100);
+    int decPart = customRound((avg - intPart) * 100);
     if (decPart == 100)
     {
         intPart++;
@@ -416,6 +416,18 @@ void printMenu()
     cout << "10. Clear Cart" << endl;
     cout << "0. Exit" << endl;
     cout << "Enter your choice: ";
+}
+
+int ShoppingCart::customRound(double value)
+{
+    if (value >= 0)
+    {
+        return (int)(value + 0.5);
+    }
+    else
+    {
+        return (int)(value - 0.5);
+    }
 }
 
 int main()
