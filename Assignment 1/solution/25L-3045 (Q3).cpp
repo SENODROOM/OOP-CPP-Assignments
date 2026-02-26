@@ -5,7 +5,7 @@ int countNonZero(int *row, int cols)
     int count = 0;
     for (int j = 0; j < cols; j++)
     {
-        if (row[j] != 0)
+        if (row[j] != 100)
         {
             count++;
         }
@@ -27,7 +27,7 @@ int **createCompactList(int **grid, int rows, int cols, int *&rowSizes)
         int idx = 0;
         for (int j = 0; j < cols; j++)
         {
-            if (grid[i][j] != 0)
+            if (grid[i][j] != 100)
             {
                 compact[i][idx++] = grid[i][j];
             }
@@ -78,19 +78,19 @@ void printCompact(int **compact, int rows, int *rowSizes)
 int main()
 {
     int ROWS, COLS;
-    
+
     cout << "Enter number of rows: ";
     cin >> ROWS;
     cout << "Enter number of columns: ";
     cin >> COLS;
-    
+
     // Create dynamic grid
     int **grid = new int *[ROWS];
     for (int i = 0; i < ROWS; i++)
     {
         grid[i] = new int[COLS];
     }
-    
+
     // Get user input with data[0][0] style display
     cout << "\nEnter matrix elements:" << endl;
     for (int i = 0; i < ROWS; i++)
