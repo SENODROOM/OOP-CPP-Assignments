@@ -1,5 +1,4 @@
-#include <iostream>
-using namespace std;
+#include "InventoryCleanup.h"
 
 int countNonZero(int *row, int cols)
 {
@@ -78,23 +77,28 @@ void printCompact(int **compact, int rows, int *rowSizes)
 
 int main()
 {
-    const int ROWS = 5;
-    const int COLS = 6;
-
-    int data[ROWS][COLS] = {
-        {2, 3, 1, 0, 0, 0},
-        {0, 0, 0, 1, 1, 0},
-        {1, 0, 0, 0, 0, 0},
-        {1, 1, 1, 2, 0, 2},
-        {5, 0, 0, 0, 10, 0}};
-
+    int ROWS, COLS;
+    
+    cout << "Enter number of rows: ";
+    cin >> ROWS;
+    cout << "Enter number of columns: ";
+    cin >> COLS;
+    
+    // Create dynamic grid
     int **grid = new int *[ROWS];
     for (int i = 0; i < ROWS; i++)
     {
         grid[i] = new int[COLS];
+    }
+    
+    // Get user input with data[0][0] style display
+    cout << "\nEnter matrix elements:" << endl;
+    for (int i = 0; i < ROWS; i++)
+    {
         for (int j = 0; j < COLS; j++)
         {
-            grid[i][j] = data[i][j];
+            cout << "data[" << i << "][" << j << "]: ";
+            cin >> grid[i][j];
         }
     }
 
