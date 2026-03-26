@@ -1,0 +1,390 @@
+#include <iostream>
+#include <stdexcept>
+using namespace std;
+
+// ============================================================
+// Month names for formatted output (fmt=2)
+// ============================================================
+static const char* MONTH_NAMES[] = {
+    "", "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+};
+
+// ============================================================
+// CalendarDate — Gregorian calendar date with full arithmetic
+// ============================================================
+class CalendarDate {
+private:
+    int day;
+    int month;
+    int year;
+
+    // ----------------------------------------------------------
+    // Print a number with leading zero if < 10
+    // ----------------------------------------------------------
+    static void printPadded(int n) {
+        if (n < 10) cout << "0";
+        cout << n;
+    }
+
+public:
+    // ----------------------------------------------------------
+    // isLeapYear(): standard Gregorian rule
+    // ----------------------------------------------------------
+    bool isLeapYear() const {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    }
+
+    // ----------------------------------------------------------
+    // daysInMonth(): respects leap year for February
+    // ----------------------------------------------------------
+    int daysInMonth(int m, int y) const {
+        static const int days[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
+        if (m == 2) {
+            // check leap for year y
+            if ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0))
+                return 29;
+            return 28;
+        }
+        return days[m];
+    }
+
+    // ----------------------------------------------------------
+    // isValid(): true if stored date is a valid calendar date
+    // ----------------------------------------------------------
+    bool isValid() const {
+        if (month < 1 || month > 12) return false;
+        if (year  < 1)               return false;
+        if (day   < 1 || day > daysInMonth(month, year)) return false;
+        return true;
+    }
+
+    // ----------------------------------------------------------
+    // toTotalDays(): days since base date 01-01-2000
+    // ----------------------------------------------------------
+    int toTotalDays() const {
+        // Count days year by year from 2000 up to (year-1),
+        // then add days for months within current year,
+        // then add day-1.
+        int total = 0;
+        int baseYear = 2000;
+
+        if (year >= baseYear) {
+            for (int y = baseYear; y < year; ++y) {
+                CalendarDate tmp; tmp.year = y; // temp to call isLeapYear
+                total += tmp.isLeapYear() ? 366 : 365;
+            }
+        } else {
+            // dates before 2000 give negative totals
+            for (int y = year; y < baseYear; ++y) {
+                CalendarDate tmp; tmp.year = y;
+                total -= tmp.isLeapYear() ? 366 : 365;
+            }
+        }
+
+        for (int m = 1; m < month; ++m)
+            total += daysInMonth(m, year);
+
+        total += (day - 1);
+        return total;
+    }
+
+    // ----------------------------------------------------------
+    // fromTotalDays(): set this date from days-since-01-01-2000
+    // ----------------------------------------------------------
+    void fromTotalDays(int total) {
+        year  = 2000;
+        month = 1;
+        day   = 1;
+
+        // Handle negative (dates before 2000)
+        while (total < 0) {
+            --year;
+            int diy = isLeapYear() ? 366 : 365;
+            total += diy;
+        }
+        // Advance years
+        while (true) {
+            int diy = isLeapYear() ? 366 : 365;
+            if (total < diy) break;
+            total -= diy;
+            ++year;
+        }
+        // Advance months
+        while (true) {
+            int dim = daysInMonth(month, year);
+            if (total < dim) break;
+            total -= dim;
+            ++month;
+        }
+        day = total + 1;
+    }
+
+    // ----------------------------------------------------------
+    // addDays / subtractDays using integer arithmetic
+    // ----------------------------------------------------------
+    void addDays(int n) {
+        fromTotalDays(toTotalDays() + n);
+    }
+
+    void subtractDays(int n) {
+        fromTotalDays(toTotalDays() - n);
+    }
+
+    // ----------------------------------------------------------
+    // print(): three formats
+    //   fmt=1: DD-MM-YYYY
+    //   fmt=2: Month D, YYYY
+    //   fmt=3: YYYY/MM/DD
+    // ----------------------------------------------------------
+    void print(int fmt) const {
+        if (fmt == 1) {
+            printPadded(day); cout << "-"; printPadded(month); cout << "-" << year;
+        } else if (fmt == 2) {
+            cout << MONTH_NAMES[month] << " " << day << ", " << year;
+        } else if (fmt == 3) {
+            cout << year << "/"; printPadded(month); cout << "/"; printPadded(day);
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Constructors
+    // ----------------------------------------------------------
+
+    /// Default: 01-01-2000
+    CalendarDate() : day(1), month(1), year(2000) {}
+
+    /// Parameterised: validate, throw or reset on invalid
+    CalendarDate(int d, int m, int y) : day(d), month(m), year(y) {
+        if (!isValid()) {
+            cout << "Invalid Date! Reset to: 01-01-2000\n";
+            day = 1; month = 1; year = 2000;
+        }
+    }
+
+    /// From total days since 01-01-2000
+    CalendarDate(int totalDays) : day(1), month(1), year(2000) {
+        fromTotalDays(totalDays);
+    }
+
+    /// Copy constructor
+    CalendarDate(const CalendarDate& other)
+        : day(other.day), month(other.month), year(other.year) {}
+
+    // ----------------------------------------------------------
+    // Arithmetic operators
+    // ----------------------------------------------------------
+
+    /// date + int: new date n days ahead
+    CalendarDate operator+(int n) const {
+        CalendarDate result(*this);
+        result.addDays(n);
+        return result;
+    }
+
+    /// date - int: new date n days behind
+    CalendarDate operator-(int n) const {
+        CalendarDate result(*this);
+        result.subtractDays(n);
+        return result;
+    }
+
+    /// date - date: chronological difference in days
+    int operator-(const CalendarDate& other) const {
+        return toTotalDays() - other.toTotalDays();
+    }
+
+    /// int + date (friend)
+    friend CalendarDate operator+(int n, const CalendarDate& d) {
+        return d + n;
+    }
+
+    // ----------------------------------------------------------
+    // Compound assignment
+    // ----------------------------------------------------------
+    CalendarDate& operator+=(int n) {
+        addDays(n);
+        return *this;
+    }
+    CalendarDate& operator-=(int n) {
+        subtractDays(n);
+        return *this;
+    }
+
+    // ----------------------------------------------------------
+    // Increment / Decrement
+    // ----------------------------------------------------------
+    CalendarDate& operator++() {          // prefix ++
+        addDays(1);
+        return *this;
+    }
+    CalendarDate operator++(int) {        // postfix ++
+        CalendarDate temp(*this);
+        addDays(1);
+        return temp;
+    }
+    CalendarDate& operator--() {          // prefix --
+        subtractDays(1);
+        return *this;
+    }
+    CalendarDate operator--(int) {        // postfix --
+        CalendarDate temp(*this);
+        subtractDays(1);
+        return temp;
+    }
+
+    // ----------------------------------------------------------
+    // Comparison operators — use toTotalDays() for accuracy
+    // ----------------------------------------------------------
+    bool operator==(const CalendarDate& o) const { return toTotalDays() == o.toTotalDays(); }
+    bool operator!=(const CalendarDate& o) const { return !(*this == o); }
+    bool operator< (const CalendarDate& o) const { return toTotalDays() <  o.toTotalDays(); }
+    bool operator> (const CalendarDate& o) const { return o < *this; }
+    bool operator<=(const CalendarDate& o) const { return !(*this > o); }
+    bool operator>=(const CalendarDate& o) const { return !(*this < o); }
+
+    // ----------------------------------------------------------
+    // Function call operator (): print all three formats
+    // ----------------------------------------------------------
+    void operator()() const {
+        print(1); cout << "\n";
+        print(2); cout << "\n";
+        print(3); cout << "\n";
+    }
+
+    // ----------------------------------------------------------
+    // Stream operators
+    // ----------------------------------------------------------
+
+    /// >> reads DD MM YYYY, validates
+    friend istream& operator>>(istream& in, CalendarDate& cd) {
+        int d, m, y;
+        in >> d >> m >> y;
+        CalendarDate temp(d, m, y);  // constructor handles invalid message
+        cd = temp;
+        return in;
+    }
+
+    /// << prints DD-MM-YYYY
+    friend ostream& operator<<(ostream& out, const CalendarDate& cd) {
+        if (cd.day   < 10) out << "0";
+        out << cd.day << "-";
+        if (cd.month < 10) out << "0";
+        out << cd.month << "-" << cd.year;
+        return out;
+    }
+};
+
+// ============================================================
+// main() — menu-driven driver
+// ============================================================
+int main() {
+    CalendarDate current;
+    int choice;
+
+    do {
+        cout << "\n============================================\n";
+        cout << "      Calendar Management System\n";
+        cout << "============================================\n";
+        cout << " 1.  Enter a new date\n";
+        cout << " 2.  Display date\n";
+        cout << " 3.  Add days\n";
+        cout << " 4.  Subtract days\n";
+        cout << " 5.  Compare two dates\n";
+        cout << " 6.  Find difference between two dates\n";
+        cout << " 7.  Test increment operators (++ prefix & postfix)\n";
+        cout << " 8.  Test decrement operators (-- prefix & postfix)\n";
+        cout << " 9.  Test compound operators += and -=\n";
+        cout << " 10. Check leap year\n";
+        cout << " 11. Display in all formats (function call operator)\n";
+        cout << " 12. Exit\n";
+        cout << "--------------------------------------------\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        try {
+            if (choice == 1) {
+                cout << "Enter date (DD MM YYYY): ";
+                cin >> current;
+                cout << "Stored: " << current << "\n";
+
+            } else if (choice == 2) {
+                cout << "Current date: " << current << "\n";
+
+            } else if (choice == 3) {
+                int n;
+                cout << "Days to add: ";
+                cin >> n;
+                current += n;
+                cout << "New date: " << current << "\n";
+
+            } else if (choice == 4) {
+                int n;
+                cout << "Days to subtract: ";
+                cin >> n;
+                current -= n;
+                cout << "New date: " << current << "\n";
+
+            } else if (choice == 5) {
+                cout << "Enter second date (DD MM YYYY): ";
+                CalendarDate other;
+                cin >> other;
+                cout << "Equal?        " << (current == other ? "Yes" : "No") << "\n";
+                cout << "Less than?    " << (current <  other ? "Yes" : "No") << "\n";
+                cout << "Greater than? " << (current >  other ? "Yes" : "No") << "\n";
+
+            } else if (choice == 6) {
+                cout << "Enter second date (DD MM YYYY): ";
+                CalendarDate other;
+                cin >> other;
+                int diff = current - other;
+                if (diff < 0) diff = -diff;
+                cout << "Difference: " << diff << " days\n";
+
+            } else if (choice == 7) {
+                cout << "Current: " << current << "\n";
+                CalendarDate old = current++;
+                cout << "After postfix r++  — old value: " << old    << "\n";
+                cout << "                    new value: " << current << "\n";
+                ++current;
+                cout << "After prefix ++r: " << current << "\n";
+
+            } else if (choice == 8) {
+                cout << "Current: " << current << "\n";
+                CalendarDate old = current--;
+                cout << "After postfix r--  — old value: " << old    << "\n";
+                cout << "                    new value: " << current << "\n";
+                --current;
+                cout << "After prefix --r: " << current << "\n";
+
+            } else if (choice == 9) {
+                int n;
+                cout << "Enter days for +=: ";
+                cin >> n;
+                current += n;
+                cout << "After +=: " << current << "\n";
+                cout << "Enter days for -=: ";
+                cin >> n;
+                current -= n;
+                cout << "After -=: " << current << "\n";
+
+            } else if (choice == 10) {
+                cout << current << " — leap year? "
+                     << (current.isLeapYear() ? "Yes" : "No") << "\n";
+
+            } else if (choice == 11) {
+                current();    // prints all three formats
+
+            } else if (choice == 12) {
+                cout << "Exiting...\n";
+            } else {
+                cout << "Invalid choice. Please enter 1-12.\n";
+            }
+        } catch (const exception& e) {
+            cout << e.what() << "\n";
+        }
+
+    } while (choice != 12);
+
+    return 0;
+}
